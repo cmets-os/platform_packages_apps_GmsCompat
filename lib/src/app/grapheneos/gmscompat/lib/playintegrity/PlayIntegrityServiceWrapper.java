@@ -64,9 +64,16 @@ abstract class PlayIntegrityServiceWrapper extends BinderWrapper {
         Log.d(TAG, "integrity token request detected");
 
         boolean isBlocked = isPlayIntegrityBlocked();
+        boolean spoofing = !isBlocked && PlayIntegrityUtils.shouldSpoofPlayIntegrity();
+        PlayIntegrityUtils.logSpoofDecision(spoofing);
+        if (spoofing) {
+            PlayIntegrityUtils.ensureSpoofProcessState();
+        }
         onIntegrityTokenRequest(isBlocked);
 
         if (!isBlocked) {
+            // Spoof path: allow the real Play Integrity binder through; props + keystore
+            // attestation spoof are applied in-process / in keystore2 for this caller.
             return false;
         }
 
