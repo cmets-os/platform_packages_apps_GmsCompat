@@ -3,12 +3,10 @@ package app.grapheneos.gmscompat.lib.playintegrity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.GosPackageState;
 import android.ext.PackageId;
 import android.ext.integrity.IntegritySpoofPolicy;
 import android.ext.settings.app.AswBlockPlayIntegrityApi;
-import android.ext.settings.app.AswSpoofPlayIntegrity;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -75,15 +73,6 @@ public class PlayIntegrityUtils {
             return false;
         }
         return IntegritySpoofPolicy.isPlayIntegritySpoofEnabled(ctx, pkg, ctx.getUserId());
-    }
-
-    static boolean hasExplicitSpoofFlag() {
-        Context ctx = appContext();
-        if (ctx == null) {
-            return false;
-        }
-        ApplicationInfo ai = ctx.getApplicationInfo();
-        return AswSpoofPlayIntegrity.I.get(ctx, ctx.getUserId(), ai, GosPackageState.getForSelf(ctx));
     }
 
     static void logSpoofDecision(boolean spoofing) {
