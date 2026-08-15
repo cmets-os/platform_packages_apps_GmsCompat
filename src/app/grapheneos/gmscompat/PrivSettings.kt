@@ -69,13 +69,19 @@ class PrivSettings : IBinder.DeathRecipient {
         }
     }
 
-    fun putStrings(ns: String, keys: Array<String>, values: Array<String>): Boolean {
-        if (DBG) logd{"$ns keys " + Arrays.toString(keys) + " values " + Arrays.toString(values)}
+    fun putStrings(ns: String, keys: List<String>, values: List<String>): Boolean {
+        if (DBG) {
+            for (i in 0 until keys.size) {
+                logd{"$ns ${keys[i]} = ${values[i]}"}
+            }
+        }
 
         val storage = storage(ns)
 
         val res = synchronized(storage) {
             val ed = storage.edit()
+            /** @see android.provider.DeviceConfig#setProperties */
+            ed.clear()
             for (i in 0 until keys.size) {
                 ed.putString(keys[i], values[i])
             }

@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.StringParceledListSlice
 import android.database.IContentObserver
 import android.ext.LogViewerApp
 import android.ext.PackageId
@@ -54,6 +55,7 @@ object BinderGms2Gca : IGms2Gca.Stub() {
         Log.d(TAG, "connect from $pkg|$processName, pid ${boundProcess.pid}")
 
         val deathRecipient = DeathRecipient(iGca2Gms)
+        val persistentFgServiceLatch = PersistentFgService.requestStart()
         try {
             // important to add before linkToDeath() to avoid race with binderDied() callback
             addBoundProcess(iGca2Gms, boundProcess)
@@ -63,7 +65,6 @@ object BinderGms2Gca : IGms2Gca.Stub() {
             deathRecipient.binderDied()
             throw e
         }
-        val persistentFgServiceLatch = PersistentFgService.requestStart()
 
         // Config holder update event might be delivered after GMS process starts if both
         // GMS component and GmsCompatConfig holder are updated together, atomically.
@@ -274,8 +275,9 @@ object BinderGms2Gca : IGms2Gca.Stub() {
         ).show(Notifications.ID_PLAY_STORE_MISSING_OBB_PERMISSION)
     }
 
-    override fun raisePackageToForeground(targetPkg: String, durationMs: Long, reason: String?, reasonCode: Int) {
-        TempServiceBinding.create(targetPkg, durationMs, reason, reasonCode)
+    override fun raisePackageToForeground(targetPkg: String, durationMs: Long, reason: String?, reasonCode: Int,
+                                          serviceClassName: String?) {
+        TempServiceBinding.create(targetPkg, durationMs, reason, reasonCode, serviceClassName)
     }
 
     override fun startActivityFromTheBackground(callerPkg: String, intent: PendingIntent) {
@@ -317,6 +319,8 @@ object BinderGms2Gca : IGms2Gca.Stub() {
     override fun onUncaughtException(aer: ApplicationErrorReport) {
         val TAG = "onGmsUncaughtException"
 
+        val stackTrace = aer.crashInfo.stackTrace
+
         if (aer.packageName == PackageId.ANDROID_AUTO_NAME) {
             val perm = android.Manifest.permission.REQUEST_COMPANION_PROFILE_AUTOMOTIVE_PROJECTION
             if (ctx.checkCallingPermission(perm) != PackageManager.PERMISSION_GRANTED) {
@@ -324,10 +328,13 @@ object BinderGms2Gca : IGms2Gca.Stub() {
                 showAndroidAutoMissingBaselinePermsNotif()
                 return
             }
+            if (stackTrace.contains("java.lang.IllegalStateException: OutOfCarLifecycle")) {
+                showAndroidAutoCarConnectionLossNotif()
+                return
+            }
         }
 
         val ts = SystemClock.elapsedRealtime()
-        val stackTrace = aer.crashInfo.stackTrace
 
         // Don't spam notifications if GMS chain-crashes with similar stack traces.
 
@@ -379,8 +386,17 @@ object BinderGms2Gca : IGms2Gca.Stub() {
         }
     }
 
+    private fun showAndroidAutoCarConnectionLossNotif() {
+        Notifications.builder(Notifications.CH_APP_CRASHED).run {
+            setContentTitle(ctx.getText(R.string.notif_android_auto_car_connection_lost))
+            setShowWhen(true)
+            setSmallIcon(R.drawable.ic_info)
+            show(Notifications.generateUniqueNotificationId())
+        }
+    }
+
     private fun showAndroidAutoMissingBaselinePermsNotif() {
-        Notifications.builder(Notifications.CH_GMS_CRASHED).run {
+        Notifications.builder(Notifications.CH_APP_CRASHED).run {
             setContentTitle(ctx.getText(R.string.notif_android_auto_needs_baseline_perms_title))
             setContentText(ctx.getText(R.string.notif_android_auto_needs_baseline_perms_text))
             setShowWhen(true)
@@ -473,7 +489,7 @@ object BinderGms2Gca : IGms2Gca.Stub() {
             Notification.Action.Builder(null, label, activityPendingIntent(urlIntent)).build()
         }
 
-        Notifications.builder(Notifications.CH_GMS_CRASHED).run {
+        Notifications.builder(Notifications.CH_APP_CRASHED).run {
             setContentTitle(ctx.getString(R.string.notif_gms_crash_title, getApplicationLabel(ctx, aer.packageName)))
             setContentText(ctx.getText(R.string.notif_gms_crash_text))
             setContentIntent(activityPendingIntent(intent))
@@ -499,8 +515,8 @@ object BinderGms2Gca : IGms2Gca.Stub() {
         return privSettings.putString(ns, key, value)
     }
 
-    override fun privSettingsPutStrings(ns: String, keys: Array<String>, values: Array<String>): Boolean {
-        return privSettings.putStrings(ns, keys, values)
+    override fun privSettingsPutStrings(ns: String, keys: StringParceledListSlice, values: StringParceledListSlice): Boolean {
+        return privSettings.putStrings(ns, keys.list, values.list)
     }
 
     override fun privSettingsRegisterObserver(ns: String, key: String, observer: IContentObserver) {

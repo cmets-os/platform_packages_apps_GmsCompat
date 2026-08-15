@@ -80,7 +80,7 @@ To receive them quicker, set “Battery usage” to “Unrestricted” in Play s
 
     <string name="notif_missing_nofications_perm">%1$s tried to show a notification</string>
 
-    <string name="notif_ch_gms_crash">Sandboxed Google Play crashed</string>
+    <string name="notif_ch_app_crash">App crash</string>
     <string name="notif_gms_crash_title">%1$s has crashed</string>
     <string name="notif_gms_crash_text">Tap to see the details</string>
     <string name="notif_gms_crash_report">Report to developers</string>
@@ -105,6 +105,7 @@ To receive them quicker, set “Battery usage” to “Unrestricted” in Play s
 
     <string name="notif_android_auto_needs_baseline_perms_title">Android Auto needs setup</string>
     <string name="notif_android_auto_needs_baseline_perms_text">Go to Settings ➔ Apps ➔ Sandboxed Google Play ➔ Android Auto</string>
+    <string name="notif_android_auto_car_connection_lost">Android Auto car connection was unexpectedly lost</string>
 
     <string name="notif_ch_manage_play_integrity_api">Play Integrity API usage</string>
     <string name="notif_app_used_play_integrity_api_title">Play Integrity API usage</string>
